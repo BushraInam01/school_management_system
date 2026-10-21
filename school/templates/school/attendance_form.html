@@ -1,0 +1,15 @@
+{% extends "school/base.html" %}
+
+{% block title %}Mark Attendance{% endblock %}
+
+{% block content %}
+    <h1>Mark Student Attendance</h1>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit">Save Attendance</button>
+    </form>
+{% endblock %}

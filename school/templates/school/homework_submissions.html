@@ -1,0 +1,44 @@
+{% extends "school/base.html" %}
+
+{% block title %}Homework Submissions{% endblock %}
+
+{% block content %}
+    <h1>Homework Submissions</h1>
+
+    <h2>{{ homework.title }}</h2>
+
+    <p>
+        <strong>Class:</strong>
+        {{ homework.school_class }}
+    </p>
+
+    <p>
+        <strong>Due Date:</strong>
+        {{ homework.due_date }}
+    </p>
+
+    <hr>
+
+    {% if submissions %}
+        {% for submission in submissions %}
+            <div>
+                <h3>{{ submission.student }}</h3>
+
+                <p>
+                    <strong>Submitted At:</strong>
+                    {{ submission.submitted_at }}
+                </p>
+
+                <p>
+                    <strong>Answer:</strong>
+                </p>
+
+                <p>{{ submission.answer }}</p>
+
+                <hr>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No students have submitted this homework yet.</p>
+    {% endif %}
+{% endblock %}

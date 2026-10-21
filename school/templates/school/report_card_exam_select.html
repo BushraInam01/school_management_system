@@ -1,0 +1,42 @@
+{% extends "school/base.html" %}
+
+{% block title %}Select Exam - Report Card{% endblock %}
+
+{% block content %}
+    <h1>Student Report Card</h1>
+
+    <h2>Select Exam</h2>
+
+    <p>
+        Student:
+        {{ student.first_name }} {{ student.last_name }}
+    </p>
+
+    <p>
+        Roll Number: {{ student.roll_number }}
+    </p>
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    {% if exam_names %}
+        <form method="POST">
+            {% csrf_token %}
+
+            <label for="exam_name">Choose Exam:</label>
+
+            <select name="exam_name" id="exam_name" required>
+                <option value="">-- Select Exam --</option>
+
+                {% for exam in exam_names %}
+                    <option value="{{ exam }}">{{ exam }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit">Generate Report Card</button>
+        </form>
+    {% else %}
+        <p>No exams or grades are available for this student yet.</p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "school/base.html" %}
+
+{% block title %}My Homework{% endblock %}
+
+{% block content %}
+    <h1>My Assigned Homework</h1>
+
+    {% if homeworks %}
+        {% for homework in homeworks %}
+            <div>
+                <h2>{{ homework.title }}</h2>
+
+                <p>
+                    <strong>Class:</strong>
+                    {{ homework.school_class }}
+                </p>
+
+                <p>
+                    <strong>Teacher:</strong>
+                    {{ homework.teacher }}
+                </p>
+
+                <p>
+                    <strong>Description:</strong>
+                    {{ homework.description }}
+                </p>
+
+                <p>
+                    <strong>Due Date:</strong>
+                    {{ homework.due_date }}
+                </p>
+
+                <p>
+                    <strong>Submission Status:</strong>
+
+                    {% if homework.status == "Submitted" %}
+                        <span style="color: green;">
+                            Submitted
+                        </span>
+
+                    {% elif homework.status == "Overdue" %}
+                        <span style="color: red;">
+                            Overdue
+                        </span>
+
+                    {% else %}
+                        <span style="color: orange;">
+                            Pending
+                        </span>
+                    {% endif %}
+                </p>
+
+                {% if homework.status == "Pending" %}
+                    <a href="{% url 'homework_submit' homework.id %}">
+                        Submit Homework
+                    </a>
+                {% endif %}
+
+                <hr>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No homework assigned to your class yet.</p>
+    {% endif %}
+{% endblock %}

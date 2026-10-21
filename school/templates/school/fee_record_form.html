@@ -1,0 +1,22 @@
+{% extends "school/base.html" %}
+
+{% block title %}Add Fee Record{% endblock %}
+
+{% block content %}
+    <h1>Add New Fee Record</h1>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+        {{ form.errors }}
+
+        <button type="submit">Save Fee Record</button>
+    </form>
+
+    <p>
+        <a href="{% url 'fee_record_list' %}">
+            Back to Fee Records
+        </a>
+    </p>
+{% endblock %}

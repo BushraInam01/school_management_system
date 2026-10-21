@@ -1,0 +1,60 @@
+{% extends "school/base.html" %}
+
+{% block title %}School Dashboard{% endblock %}
+{% block nav_dashboard %}{% endblock %}
+
+{% block content %}
+
+    {% if role == "Student" %}
+        <h1>Welcome to Student Dashboard</h1>
+
+        <ul>
+            <li><a href="{% url 'timetable_view' %}">View Timetable</a></li>
+            <li><a href="{% url 'student_homework_list' %}">My Homework</a></li>
+            <li><a href="{% url 'my_homework_results' %}">Homework Results</a></li>
+            <li><a href="{% url 'my_report_card' %}">My Report Card</a></li>
+            <a href="{% url 'parent_child_detail' child.id %}">Grades, Homework &amp; Fees</a>
+        </ul>
+
+    {% elif role == "Teacher" %}
+        <h1>Welcome to Teacher Dashboard</h1>
+
+        <ul>
+            <li><a href="{% url 'timetable_view' %}">My Timetable</a></li>
+            <li><a href="{% url 'attendance_mark' %}">Mark Attendance</a></li>
+            <li><a href="{% url 'grade_entry' %}">Enter Grades</a></li>
+            <li><a href="{% url 'bulk_grade_entry' %}">Bulk Grade Entry</a></li>
+            <li><a href="{% url 'homework_create' %}">Create Homework</a></li>
+            <li><a href="{% url 'teacher_homework_list' %}">My Homework Submissions</a></li>
+        </ul>
+
+    {% elif role == "Parent" %}
+        <h1>Welcome to Parent Dashboard</h1>
+
+        <ul>
+            <li><a href="{% url 'timetable_view' %}">Child's Timetable</a></li>
+        </ul>
+
+        <h2>My Children</h2>
+
+        {% if children %}
+        <ul>
+            {% for child in children %}
+            <li>
+                {{ child.first_name }} {{ child.last_name }}
+                (Roll No: {{ child.roll_number }},
+                Class: {{ child.school_class|default:"Not Assigned" }})
+                - <a href="{% url 'report_card_exam_select' child.id %}">Report Card</a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No children are linked to your account.</p>
+        {% endif %}
+
+    {% else %}
+        <h1>Dashboard</h1>
+        <p>No dashboard is available for this role.</p>
+    {% endif %}
+
+{% endblock %}

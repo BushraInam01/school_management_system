@@ -1,0 +1,33 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.home_view, name="home"),
+    path("teacher-dashboard/", views.teacher_dashboard, name="teacher_dashboard"),
+    path("student-dashboard/", views.student_dashboard, name="student_dashboard"),
+    path("parent-dashboard/", views.parent_dashboard, name="parent_dashboard"),
+    path("dashboard/", views.dashboard_redirect, name="dashboard"),
+    path("login/", views.common_login, name="common_login"),
+    path("logout/", views.common_logout, name="common_logout"),
+    path("timetable/", views.timetable_view, name="timetable_view"),
+    path("attendance/mark/", views.attendance_mark, name="attendance_mark"),
+    path("attendance/report/", views.monthly_attendance_report, name="monthly_attendance_report"),
+    path("grades/entry/", views.grade_entry, name="grade_entry"),
+    path("grades/bulk-entry/", views.bulk_grade_entry, name="bulk_grade_entry"),
+    path("homework/create/", views.homework_create, name="homework_create"),
+    path("homework/", views.student_homework_list, name="student_homework_list"),
+    path("homework/<int:homework_id>/submit/", views.homework_submit, name="homework_submit"),
+    path("homework/<int:homework_id>/submissions/", views.homework_submissions, name="homework_submissions"),
+    path("homework/submission/<int:submission_id>/review/", views.homework_review, name="homework_review"),
+    path("homework/results/", views.my_homework_results, name="my_homework_results"),
+    path("report-card/<int:student_id>/", views.student_report_card, name="student_report_card"),
+    path("my-report-card/", views.student_report_card, name="my_report_card"),
+    path("fees/", views.fee_record_list, name="fee_record_list"),
+    path("fees/create/", views.fee_record_create, name="fee_record_create"),
+    path("fees/<int:fee_id>/edit/", views.fee_record_edit, name="fee_record_edit"),
+    path("fees/<int:fee_id>/delete/", views.fee_record_delete, name="fee_record_delete"),
+    path("teacher/homework/", views.teacher_homework_list, name="teacher_homework_list"),
+    path("report-card/<int:student_id>/select-exam/", views.report_card_exam_select, name="report_card_exam_select"),
+    path("my-report-card/select-exam/", views.report_card_exam_select, name="my_report_card_exam_select"),
+    path("parent/child/<int:student_id>/", views.parent_child_detail, name="parent_child_detail"),
+]

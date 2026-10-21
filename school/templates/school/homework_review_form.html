@@ -1,0 +1,30 @@
+{% extends "school/base.html" %}
+
+{% block title %}Review Homework{% endblock %}
+
+{% block content %}
+    <h1>Review Homework</h1>
+
+    <h2>{{ submission.homework.title }}</h2>
+
+    <p>
+        <strong>Student:</strong>
+        {{ submission.student }}
+    </p>
+
+    <h3>Student's Answer</h3>
+
+    <p>{{ submission.answer }}</p>
+
+    <hr>
+
+    <h3>Give Marks and Feedback</h3>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit">Save Review</button>
+    </form>
+{% endblock %}

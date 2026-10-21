@@ -1,0 +1,27 @@
+{% extends "school/base.html" %}
+
+{% block title %}Bulk Grade Entry{% endblock %}
+
+{% block content %}
+    <h1>Bulk Grade Entry</h1>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {{ formset.management_form }}
+
+        {% for form in formset %}
+            <fieldset>
+                <legend>Student {{ forloop.counter }}</legend>
+
+                {{ form.as_p }}
+
+                {% if form.errors %}
+                    {{ form.errors }}
+                {% endif %}
+            </fieldset>
+        {% endfor %}
+
+        <button type="submit">Save All Grades</button>
+    </form>
+{% endblock %}

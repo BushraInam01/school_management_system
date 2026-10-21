@@ -1,0 +1,29 @@
+{% extends "school/base.html" %}
+
+{% block title %}Submit Homework{% endblock %}
+
+{% block content %}
+    <h1>Submit Homework</h1>
+
+    <h2>{{ homework.title }}</h2>
+
+    <p>
+        <strong>Description:</strong>
+        {{ homework.description }}
+    </p>
+
+    <p>
+        <strong>Due Date:</strong>
+        {{ homework.due_date }}
+    </p>
+
+    <hr>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit">Submit Homework</button>
+    </form>
+{% endblock %}

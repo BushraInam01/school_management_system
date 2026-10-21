@@ -1,0 +1,47 @@
+{% extends "school/base.html" %}
+
+{% block title %}My Homework Results{% endblock %}
+
+{% block content %}
+    <h1>My Homework Results</h1>
+
+    {% for submission in submissions %}
+
+        <hr>
+
+        <h2>{{ submission.homework.title }}</h2>
+
+        <p>
+            <strong>Submitted Answer:</strong>
+            {{ submission.answer }}
+        </p>
+
+        <p>
+            <strong>Submitted At:</strong>
+            {{ submission.submitted_at }}
+        </p>
+
+        <p>
+            <strong>Marks:</strong>
+            {% if submission.marks != None %}
+                {{ submission.marks }} / {{ submission.homework.total_marks }}
+            {% else %}
+                Not reviewed yet
+            {% endif %}
+        </p>
+
+        <p>
+            <strong>Teacher Feedback:</strong>
+            {% if submission.feedback %}
+                {{ submission.feedback }}
+            {% else %}
+                No feedback yet
+            {% endif %}
+        </p>
+
+    {% empty %}
+
+        <p>You have not submitted any homework yet.</p>
+
+    {% endfor %}
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "school/base.html" %}
+
+{% block title %}Class Timetable{% endblock %}
+
+{% block content %}
+
+    <h1>School Class Timetable</h1>
+
+    {% if timetables %}
+        <table border="1" cellpadding="10">
+            <thead>
+                <tr>
+                    <th>Class</th>
+                    <th>Subject</th>
+                    <th>Teacher</th>
+                    <th>Weekday</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in timetables %}
+                    <tr>
+                        <td>{{ item.school_class }}</td>
+                        <td>{{ item.subject }}</td>
+                        <td>{{ item.teacher }}</td>
+                        <td>{{ item.weekday }}</td>
+                        <td>{{ item.start_time|time:"h:i A" }}</td>
+                        <td>{{ item.end_time|time:"h:i A" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No timetable records available.</p>
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "school/base.html" %}
+
+{% block title %}Grade Entry{% endblock %}
+
+{% block content %}
+    <h1>Enter Student Grades</h1>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit">Save Grade</button>
+    </form>
+{% endblock %}

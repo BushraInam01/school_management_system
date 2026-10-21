@@ -1,0 +1,24 @@
+{% extends "school/base.html" %}
+
+{% block title %}My Homework Assignments{% endblock %}
+
+{% block content %}
+    <h1>My Homework Assignments</h1>
+
+    {% for homework in homeworks %}
+        <div>
+            <h3>{{ homework.title }}</h3>
+            <p>Class: {{ homework.school_class }}</p>
+            <p>Due Date: {{ homework.due_date }}</p>
+
+            <a href="{% url 'homework_submissions' homework.id %}">
+                View Student Submissions
+            </a>
+        </div>
+        <hr>
+    {% empty %}
+        <p>No homework assignments found.</p>
+    {% endfor %}
+
+    <a href="{% url 'teacher_dashboard' %}">Back to Dashboard</a>
+{% endblock %}

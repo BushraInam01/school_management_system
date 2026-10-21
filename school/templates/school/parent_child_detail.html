@@ -1,0 +1,61 @@
+{% extends "school/base.html" %}
+{% block content %}
+<h2>{{ student }}</h2>
+<p>Roll Number: {{ student.roll_number }} | Class: {{ student.school_class|default:"Not Assigned" }}</p>
+
+<h3>Grades</h3>
+{% if grades %}
+<table border="1" cellpadding="6">
+  <tr><th>Exam</th><th>Subject</th><th>Obtained</th><th>Total</th><th>Percentage</th></tr>
+  {% for g in grades %}
+  <tr>
+    <td>{{ g.exam_name }}</td>
+    <td>{{ g.subject }}</td>
+    <td>{{ g.obtained_marks }}</td>
+    <td>{{ g.total_marks }}</td>
+    <td>{% widthratio g.obtained_marks g.total_marks 100 %}%</td>
+  </tr>
+  {% endfor %}
+</table>
+<p><a href="{% url 'report_card_exam_select' student.id %}">Download Report Card (PDF)</a></p>
+{% else %}
+<p>No grades yet.</p>
+{% endif %}
+
+<h3>Homework</h3>
+{% if homework_rows %}
+<table border="1" cellpadding="6">
+  <tr><th>Title</th><th>Teacher</th><th>Due Date</th><th>Status</th><th>Marks</th><th>Feedback</th></tr>
+  {% for row in homework_rows %}
+  <tr>
+    <td>{{ row.homework.title }}</td>
+    <td>{{ row.homework.teacher }}</td>
+    <td>{{ row.homework.due_date }}</td>
+    <td>{{ row.status }}</td>
+    <td>{% if row.submission and row.submission.marks is not None %}{{ row.submission.marks }} / {{ row.homework.total_marks }}{% else %}-{% endif %}</td>
+    <td>{{ row.submission.feedback|default:"-" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>No homework assigned.</p>
+{% endif %}
+
+<h3>Fees</h3>
+{% if fee_records %}
+<table border="1" cellpadding="6">
+  <tr><th>Amount</th><th>Due Date</th><th>Status</th></tr>
+  {% for fee in fee_records %}
+  <tr>
+    <td>{{ fee.amount }}</td>
+    <td>{{ fee.due_date }}</td>
+    <td>{{ fee.status }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>No fee records.</p>
+{% endif %}
+
+<p><a href="{% url 'parent_dashboard' %}">Back to Dashboard</a></p>
+{% endblock %}

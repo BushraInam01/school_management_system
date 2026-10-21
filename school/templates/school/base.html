@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}School Management System{% endblock %}</title>
+</head>
+<body>
+
+    <nav>
+        {% if user.is_authenticated %}
+            {% block nav_dashboard %}
+                <a href="{% url 'dashboard' %}">Dashboard</a> |
+            {% endblock %}
+            <span>{{ user.get_username }}</span>
+            <form method="post" action="{% url 'common_logout' %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit">Logout</button>
+            </form>
+        {% endif %}
+    </nav>
+    <hr>
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+</body>
+</html>
