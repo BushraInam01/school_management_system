@@ -4,6 +4,8 @@ import calendar
 from io import BytesIO
 from xml.sax.saxutils import escape
 from urllib.parse import urlencode
+from decimal import Decimal
+
 
 from django.urls import reverse
 from django.http import HttpResponse, Http404
@@ -98,16 +100,83 @@ def _parent_children(user):
     )
 
 
+
+#Parent Dashboard
 @login_required
 def parent_dashboard(request):
-    if request.user.groups.filter(name="Parent").exists():
-        return render(
-            request,
-            "school/dashboard.html",
-            {"role": "Parent", "children": _parent_children(request.user)}
+    if not request.user.groups.filter(name="Parent").exists():
+        raise PermissionDenied("Access Denied: You are not a Parent")
+
+    children = _parent_children(request.user)
+    children_data = []
+
+    for child in children:
+        # Child ke grades/results
+        grades = Grade.objects.filter(
+            student=child
+        ).order_by("-created_at")
+
+        # Child ki class ka homework aur uski submission
+        homework_items = []
+
+        if child.school_class_id:
+            homeworks = Homework.objects.filter(
+                school_class=child.school_class
+            ).order_by("due_date")
+
+            for homework in homeworks:
+                submission = HomeworkSubmission.objects.filter(
+                    homework=homework,
+                    student=child
+                ).first()
+
+                homework_items.append({
+                    "homework": homework,
+                    "submission": submission,
+                })
+
+        # Child ke fee records
+        fees = list(
+            FeeRecord.objects.filter(
+                student=child
+            ).order_by("-due_date")
         )
 
-    raise PermissionDenied("Access Denied: You are not a Parent")
+        total_fees = sum(
+            (fee.amount for fee in fees),
+            Decimal("0.00")
+        )
+
+        paid_fees = sum(
+            (
+                fee.amount
+                for fee in fees
+                if fee.status == "Paid"
+            ),
+            Decimal("0.00")
+        )
+
+        unpaid_fees = total_fees - paid_fees
+
+        children_data.append({
+            "child": child,
+            "grades": grades,
+            "homework_items": homework_items,
+            "fees": fees,
+            "total_fees": total_fees,
+            "paid_fees": paid_fees,
+            "unpaid_fees": unpaid_fees,
+        })
+
+    return render(
+        request,
+        "school/dashboard.html",
+        {
+            "role": "Parent",
+            "children": children,
+            "children_data": children_data,
+        }
+    )
 
 
 
