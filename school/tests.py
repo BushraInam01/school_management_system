@@ -11,11 +11,14 @@ from .models import (
     SchoolClass,
     Student,
     Teacher,
+    Parent,
+    Attendance,
     Grade,
     Homework,
     HomeworkSubmission,
     Timetable,
 )
+from .forms import HomeworkReviewForm
 
 
 class SchoolModelTests(TestCase):
@@ -285,3 +288,100 @@ class SchoolHomeworkAccessTests(TestCase):
             "_auth_user_id",
             self.client.session,
         )
+
+    def test_parent_cannot_view_other_child_detail(self):
+        parent_group, _ = Group.objects.get_or_create(name="Parent")
+        parent_user = User.objects.create_user(username="parent_user", password="TestPassword123!")
+        parent_user.groups.add(parent_group)
+        parent = Parent.objects.create(user=parent_user, first_name="Parent", last_name="User", email="parent@example.com")
+
+        child_user = User.objects.create_user(username="child_user", password="TestPassword123!")
+        child = Student.objects.create(user=child_user, first_name="Child", last_name="One", roll_number="C001", school_class=self.class_a)
+        parent.students.add(child)
+
+        other_user = User.objects.create_user(username="other_child_user", password="TestPassword123!")
+        other_child = Student.objects.create(user=other_user, first_name="Other", last_name="Child", roll_number="C002", school_class=self.class_b)
+
+        self.client.force_login(parent_user)
+        response = self.client.get(reverse("parent_child_detail", args=[other_child.id]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_student_cannot_view_other_student_report_card(self):
+        student_user = User.objects.create_user(username="student_1", password="TestPassword123!")
+        student_user.groups.add(self.student_group)
+
+        other_user = User.objects.create_user(username="student_2", password="TestPassword123!")
+        other_user.groups.add(self.student_group)
+        student_2 = Student.objects.create(user=other_user, first_name="Student", last_name="Two", roll_number="ST002", school_class=self.class_a)
+
+        self.client.force_login(student_user)
+        response = self.client.get(reverse("student_report_card", args=[student_2.id]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_teacher_cannot_access_unassigned_class_report_card(self):
+        student_user = User.objects.create_user(username="student_in_b", password="TestPassword123!")
+        student_user.groups.add(self.student_group)
+        student_b = Student.objects.create(user=student_user, first_name="Student", last_name="B", roll_number="ST003", school_class=self.class_b)
+
+        self.client.force_login(self.teacher_user)
+        response = self.client.get(reverse("student_report_card", args=[student_b.id]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_fees_views_are_admin_only(self):
+        self.client.force_login(self.teacher_user)
+        response = self.client.get(reverse("fee_record_list"))
+        self.assertEqual(response.status_code, 403)
+
+        response = self.client.get(reverse("fee_record_create"))
+        self.assertEqual(response.status_code, 403)
+
+        admin_user = User.objects.create_superuser(username="admin_user", password="TestPassword123!", email="admin@example.com")
+        self.client.force_login(admin_user)
+        response = self.client.get(reverse("fee_record_list"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_attendance_permission_and_duplicate(self):
+        teacher_without_perm = User.objects.create_user(username="teacher_no_perm", password="TestPassword123!")
+        teacher_without_perm.groups.add(self.teacher_group)
+        Teacher.objects.create(user=teacher_without_perm, first_name="No", last_name="Perm", email="noperm@example.com")
+
+        self.client.force_login(teacher_without_perm)
+        response = self.client.get(reverse("attendance_mark"))
+        self.assertEqual(response.status_code, 403)
+
+        content_type = ContentType.objects.get_for_model(Attendance)
+        perm = Permission.objects.get(content_type=content_type, codename="add_attendance")
+        self.teacher_user.user_permissions.add(perm)
+
+        self.client.force_login(self.teacher_user)
+        response = self.client.get(reverse("attendance_mark"))
+        self.assertEqual(response.status_code, 200)
+
+        student_user = User.objects.create_user(username="att_student", password="TestPassword123!")
+        student = Student.objects.create(user=student_user, first_name="Att", last_name="Student", roll_number="ATT001", school_class=self.class_a)
+
+        Attendance.objects.create(student=student, date=date(2026, 1, 1), status="Present")
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Attendance.objects.create(student=student, date=date(2026, 1, 1), status="Absent")
+
+    def test_homework_review_marks_cannot_exceed_total(self):
+        student_user = User.objects.create_user(username="hw_student", password="TestPassword123!")
+        student = Student.objects.create(user=student_user, first_name="HW", last_name="Student", roll_number="HW001", school_class=self.class_a)
+        submission = HomeworkSubmission.objects.create(homework=self.homework_a, student=student, answer="Done")
+
+        form = HomeworkReviewForm(data={"marks": 150, "feedback": "Good job"}, instance=submission)
+        self.assertFalse(form.is_valid())
+        self.assertIn("marks", form.errors)
+
+    def test_student_report_card_pdf_smoke(self):
+        student_user = User.objects.create_user(username="pdf_student", password="TestPassword123!")
+        student_user.groups.add(self.student_group)
+        student = Student.objects.create(user=student_user, first_name="PDF", last_name="Student", roll_number="PDF001", school_class=self.class_a)
+        Grade.objects.create(student=student, subject="Python", exam_name="Final Exam", total_marks=100, obtained_marks=90)
+
+        self.client.force_login(student_user)
+        response = self.client.get(reverse("student_report_card", args=[student.id]), {"exam_name": "Final Exam"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertTrue(len(response.content) > 0)

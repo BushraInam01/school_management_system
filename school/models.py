@@ -1,5 +1,8 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 
 
 # class School
@@ -116,6 +119,19 @@ class Timetable(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
 
+    def clean(self):
+        super().clean()
+        if self.start_time and self.end_time and self.end_time <= self.start_time:
+            raise ValidationError("End time must be after start time.")
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(end_time__gt=models.F("start_time")),
+                name="timetable_end_time_gt_start_time"
+            )
+        ]
+
     def __str__(self):
         return f"{self.school_class} - {self.subject} - {self.weekday}"
 
@@ -179,6 +195,11 @@ class Grade(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        if self.subject:
+            self.subject = self.subject.strip().title()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.student} - {self.subject} - {self.exam_name}"
 
@@ -217,8 +238,19 @@ class Homework(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     due_date = models.DateField()
-    total_marks = models.PositiveIntegerField(default=100)
+    total_marks = models.PositiveIntegerField(
+        default=100,
+        validators=[MinValueValidator(1)]
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(total_marks__gt=0),
+                name="homework_total_marks_gt_zero"
+            )
+        ]
 
     def __str__(self):
         return self.title
@@ -270,7 +302,8 @@ class FeeRecord(models.Model):
 
     amount = models.DecimalField(
         max_digits=10,
-        decimal_places=2
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))]
     )
 
     due_date = models.DateField()
@@ -282,6 +315,14 @@ class FeeRecord(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gte=0),
+                name="fee_amount_gte_zero"
+            )
+        ]
 
     def __str__(self):
         return f"{self.student} - {self.amount} - {self.status}"

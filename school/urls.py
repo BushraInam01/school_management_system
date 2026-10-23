@@ -13,6 +13,7 @@ urlpatterns = [
     path("attendance/mark/", views.attendance_mark, name="attendance_mark"),
     path("attendance/report/", views.monthly_attendance_report, name="monthly_attendance_report"),
     path("grades/entry/", views.grade_entry, name="grade_entry"),
+    path("grades/<int:grade_id>/edit/", views.grade_edit, name="grade_edit"),
     path("grades/bulk-entry/", views.bulk_grade_entry, name="bulk_grade_entry"),
     path("homework/create/", views.homework_create, name="homework_create"),
     path("homework/", views.student_homework_list, name="student_homework_list"),

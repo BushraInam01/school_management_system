@@ -1,18 +1,18 @@
 
-from datetime import date
 import calendar
-from io import BytesIO
-from xml.sax.saxutils import escape
-from urllib.parse import urlencode
+from datetime import date
 from decimal import Decimal
+from functools import wraps
+from io import BytesIO
+from urllib.parse import urlencode
+from xml.sax.saxutils import escape
 
-
+from django.core.exceptions import PermissionDenied
 from django.urls import reverse
 from django.http import HttpResponse, Http404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import redirect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Count, Q, Case, When, Value, IntegerField
 from django.db import IntegrityError, transaction
@@ -35,7 +35,6 @@ from .models import (
     Teacher,
     Student,
     Parent,
-    Attendance,
     Grade,
     Homework,
     HomeworkSubmission,
@@ -52,8 +51,32 @@ from .forms import (
     GradeFormSet,
 )
 
-from functools import wraps
-from django.core.exceptions import PermissionDenied
+
+def _teacher_class_ids(teacher):
+    return Timetable.objects.filter(
+        teacher=teacher
+    ).values_list("school_class_id", flat=True).distinct()
+
+
+def get_teacher_or_403(request, perm=None, require_classes=False):
+    if request.user.is_superuser:
+        return getattr(request.user, "teacher", None)
+
+    if not request.user.groups.filter(name="Teacher").exists():
+        raise PermissionDenied("Access Denied: You are not a Teacher.")
+
+    if perm and not request.user.has_perm(perm):
+        raise PermissionDenied("You do not have permission to perform this action.")
+
+    teacher = getattr(request.user, "teacher", None)
+    if teacher is None:
+        raise PermissionDenied("No Teacher profile is linked to this account.")
+
+    if require_classes and not _teacher_class_ids(teacher).exists():
+        raise PermissionDenied("No classes are assigned to this teacher.")
+
+    return teacher
+
 
 def role_required(group_name):
     def decorator(view_func):
@@ -65,8 +88,8 @@ def role_required(group_name):
         return login_required(wrapper)
     return decorator
 
+
 # Teacher Dashboard
-@login_required
 @role_required("Teacher")
 def teacher_dashboard(request):
     return render(request, "school/dashboard.html", {"role": "Teacher"})
@@ -87,7 +110,6 @@ def student_dashboard(request):
 
 # Parent Dashboard
 def _parent_children(user):
-    """Return the children linked to this parent account."""
     parent = getattr(user, "parent", None)
 
     if parent is None:
@@ -100,8 +122,7 @@ def _parent_children(user):
     )
 
 
-
-#Parent Dashboard
+# Parent Dashboard
 @login_required
 def parent_dashboard(request):
     if not request.user.groups.filter(name="Parent").exists():
@@ -111,31 +132,37 @@ def parent_dashboard(request):
     children_data = []
 
     for child in children:
-        # Child ke grades/results
         grades = Grade.objects.filter(
             student=child
         ).order_by("-created_at")
 
-        # Child ki class ka homework aur uski submission
         homework_items = []
 
         if child.school_class_id:
+            submissions = {
+                s.homework_id: s
+                for s in child.homework_submissions.all()
+            }
             homeworks = Homework.objects.filter(
                 school_class=child.school_class
-            ).order_by("due_date")
+            ).select_related("teacher").order_by("due_date")
 
+            today = date.today()
             for homework in homeworks:
-                submission = HomeworkSubmission.objects.filter(
-                    homework=homework,
-                    student=child
-                ).first()
+                submission = submissions.get(homework.id)
+                if submission:
+                    status = "Submitted"
+                elif homework.due_date < today:
+                    status = "Overdue"
+                else:
+                    status = "Pending"
 
                 homework_items.append({
                     "homework": homework,
                     "submission": submission,
+                    "status": status,
                 })
 
-        # Child ke fee records
         fees = list(
             FeeRecord.objects.filter(
                 student=child
@@ -362,16 +389,7 @@ def timetable_view(request):
 # Attendance Marking View
 @login_required
 def attendance_mark(request):
-
-    is_teacher = request.user.groups.filter(
-        name="Teacher"
-    ).exists()
-
-    if not request.user.is_superuser:
-        if not is_teacher or not request.user.has_perm(
-            "school.add_attendance"
-        ):
-            raise PermissionDenied("You do not have permission to mark attendance.")
+    get_teacher_or_403(request, "school.add_attendance")
 
     if request.method == "POST":
         form = AttendanceForm(
@@ -450,30 +468,7 @@ def monthly_attendance_report(request):
 # Grade Entry View
 @login_required
 def grade_entry(request):
-
-    is_teacher = request.user.groups.filter(
-        name="Teacher"
-    ).exists()
-
-    # Only Admin and authorized Teachers can enter grades
-    if not request.user.is_superuser:
-        if not is_teacher or not request.user.has_perm("school.add_grade"):
-            raise PermissionDenied("You do not have permission to enter grades.")
-
-    # Teacher must have a linked Teacher profile
-    if is_teacher and not request.user.is_superuser:
-        teacher = getattr(request.user, "teacher", None)
-
-        if teacher is None:
-            raise PermissionDenied("No Teacher profile is linked to this account.")
-
-        # Teacher must have at least one assigned class
-        has_classes = Timetable.objects.filter(
-            teacher=teacher
-        ).exists()
-
-        if not has_classes:
-            raise PermissionDenied("No classes are assigned to this teacher.")
+    get_teacher_or_403(request, "school.add_grade", require_classes=True)
 
     if request.method == "POST":
         form = GradeForm(
@@ -497,25 +492,7 @@ def grade_entry(request):
 
 @login_required
 def bulk_grade_entry(request):
-
-    is_teacher = request.user.groups.filter(
-        name="Teacher"
-    ).exists()
-
-    if not request.user.is_superuser:
-        if not is_teacher or not request.user.has_perm("school.add_grade"):
-            raise PermissionDenied("You do not have permission to enter grades.")
-
-    if is_teacher and not request.user.is_superuser:
-        teacher = getattr(request.user, "teacher", None)
-
-        if teacher is None:
-            raise PermissionDenied("No Teacher profile is linked to this account.")
-
-        if not Timetable.objects.filter(
-            teacher=teacher
-        ).exists():
-            raise PermissionDenied("No classes are assigned to this teacher.")
+    get_teacher_or_403(request, "school.add_grade", require_classes=True)
 
     if request.method == "POST":
         formset = GradeFormSet(
@@ -589,14 +566,8 @@ def student_report_card(request, student_id=None):
 
         # Restrict teachers to their assigned classes
         if is_teacher and not request.user.is_superuser:
-            try:
-                teacher = request.user.teacher
-            except Teacher.DoesNotExist:
-                raise PermissionDenied("No Teacher profile is linked to this account.")
-
-            assigned_classes = Timetable.objects.filter(
-                teacher=teacher
-            ).values_list("school_class_id", flat=True)
+            teacher = get_teacher_or_403(request)
+            assigned_classes = _teacher_class_ids(teacher)
 
             if (
                 student.school_class_id is None
@@ -689,7 +660,7 @@ def student_report_card(request, student_id=None):
         )
 
         table_data.append([
-            escape(grade.subject),
+            grade.subject,
             str(grade.obtained_marks),
             str(grade.total_marks),
             f"{percentage:.2f}%",
@@ -802,14 +773,8 @@ def report_card_exam_select(request, student_id=None):
 
         # Restrict teachers to their assigned classes
         if is_teacher and not request.user.is_superuser:
-            try:
-                teacher = request.user.teacher
-            except Teacher.DoesNotExist:
-                raise PermissionDenied("No Teacher profile is linked to this account.")
-
-            assigned_classes = Timetable.objects.filter(
-                teacher=teacher
-            ).values_list("school_class_id", flat=True)
+            teacher = get_teacher_or_403(request)
+            assigned_classes = _teacher_class_ids(teacher)
 
             if (
                 student.school_class_id is None
@@ -869,25 +834,7 @@ def report_card_exam_select(request, student_id=None):
 # Homework Assignment View
 @login_required
 def homework_create(request):
-
-    is_teacher = request.user.groups.filter(
-        name="Teacher"
-    ).exists()
-
-    if not request.user.is_superuser:
-        if not is_teacher or not request.user.has_perm(
-            "school.add_homework"
-        ):
-            raise PermissionDenied("You do not have permission to create homework.")
-
-    # Get the logged-in teacher's profile
-    teacher = None
-
-    if is_teacher and not request.user.is_superuser:
-        try:
-            teacher = request.user.teacher
-        except Teacher.DoesNotExist:
-            raise PermissionDenied("No Teacher profile is linked to this account.")
+    teacher = get_teacher_or_403(request, "school.add_homework")
 
     if request.method == "POST":
         form = HomeworkForm(
@@ -899,42 +846,15 @@ def homework_create(request):
             homework = form.save(commit=False)
 
             if teacher is not None:
-                # Server-side class permission check
-                allowed_class = Timetable.objects.filter(
+                if not Timetable.objects.filter(
                     teacher=teacher,
                     school_class=homework.school_class
-                ).exists()
-
-                if not allowed_class:
+                ).exists():
                     raise PermissionDenied("You cannot assign homework to this class.")
 
                 homework.teacher = teacher
-
             else:
-                teacher_id = request.POST.get("teacher")
-
-                try:
-                    homework.teacher = Teacher.objects.get(
-                        pk=teacher_id
-                    )
-                except (
-                    Teacher.DoesNotExist,
-                    ValueError,
-                    TypeError
-                ):
-                    form.add_error(
-                        None,
-                        "Please select a valid teacher."
-                    )
-
-                    return render(
-                        request,
-                        "school/homework_form.html",
-                        {
-                            "form": form,
-                            "teachers": Teacher.objects.all(),
-                        }
-                    )
+                homework.teacher = form.cleaned_data["teacher"]
 
             homework.save()
 
@@ -947,24 +867,13 @@ def homework_create(request):
     return render(
         request,
         "school/homework_form.html",
-        {
-            "form": form,
-            "teachers": Teacher.objects.all(),
-        }
+        {"form": form}
     )
 
 # Teacher's Homework List View
 @login_required
 def teacher_homework_list(request):
-    is_teacher = request.user.groups.filter(
-        name="Teacher"
-    ).exists()
-
-    if not request.user.is_superuser:
-        if not is_teacher or not request.user.has_perm(
-            "school.view_homework"
-        ):
-            raise PermissionDenied("You do not have permission to view homework.")
+    teacher = get_teacher_or_403(request, "school.view_homework")
 
     if request.user.is_superuser:
         homeworks = Homework.objects.select_related(
@@ -972,11 +881,6 @@ def teacher_homework_list(request):
             "school_class"
         ).order_by("-due_date")
     else:
-        try:
-            teacher = request.user.teacher
-        except Teacher.DoesNotExist:
-            raise PermissionDenied("No Teacher profile is linked to this account.")
-
         homeworks = Homework.objects.filter(
             teacher=teacher
         ).select_related(
@@ -1006,6 +910,10 @@ def student_homework_list(request):
         raise PermissionDenied("No Student profile is linked to this account.")
 
     if student.school_class:
+        submissions = {
+            s.homework_id: s
+            for s in student.homework_submissions.all()
+        }
         homeworks = Homework.objects.filter(
             school_class=student.school_class
         ).select_related(
@@ -1016,10 +924,8 @@ def student_homework_list(request):
         today = date.today()
 
         for homework in homeworks:
-            homework.is_submitted = HomeworkSubmission.objects.filter(
-                homework=homework,
-                student=student
-            ).exists()
+            submission = submissions.get(homework.id)
+            homework.is_submitted = submission is not None
 
             if homework.is_submitted:
                 homework.status = "Submitted"
@@ -1103,16 +1009,7 @@ def homework_submit(request, homework_id):
 # Teacher Homework Submissions View
 @login_required
 def homework_submissions(request, homework_id):
-
-    is_teacher = request.user.groups.filter(
-        name="Teacher"
-    ).exists()
-
-    if not request.user.is_superuser:
-        if not is_teacher or not request.user.has_perm(
-            "school.view_homeworksubmission"
-        ):
-            raise PermissionDenied("You do not have permission to view submissions.")
+    teacher = get_teacher_or_403(request, "school.view_homeworksubmission")
 
     homework = get_object_or_404(
         Homework,
@@ -1120,11 +1017,6 @@ def homework_submissions(request, homework_id):
     )
 
     if not request.user.is_superuser:
-        try:
-            teacher = request.user.teacher
-        except Teacher.DoesNotExist:
-            raise PermissionDenied("No Teacher profile is linked to this account.")
-
         if homework.teacher != teacher:
             raise PermissionDenied("You can only view submissions for your own homework.")
 
@@ -1145,16 +1037,7 @@ def homework_submissions(request, homework_id):
 # Homework Review View
 @login_required
 def homework_review(request, submission_id):
-
-    is_teacher = request.user.groups.filter(
-        name="Teacher"
-    ).exists()
-
-    if not request.user.is_superuser:
-        if not is_teacher or not request.user.has_perm(
-            "school.change_homeworksubmission"
-        ):
-            raise PermissionDenied("You do not have permission to review homework.")
+    teacher = get_teacher_or_403(request, "school.change_homeworksubmission")
 
     submission = get_object_or_404(
         HomeworkSubmission,
@@ -1162,11 +1045,6 @@ def homework_review(request, submission_id):
     )
 
     if not request.user.is_superuser:
-        try:
-            teacher = request.user.teacher
-        except Teacher.DoesNotExist:
-            raise PermissionDenied("No Teacher profile is linked to this account.")
-
         if submission.homework.teacher != teacher:
             raise PermissionDenied("You can only review your own homework submissions.")
 
@@ -1320,7 +1198,39 @@ def dashboard_redirect(request):
 
 
 
-# Parent: child ka grades, homework aur fees ka page
+@login_required
+def grade_edit(request, grade_id):
+    grade = get_object_or_404(Grade, id=grade_id)
+
+    if not request.user.is_superuser:
+        teacher = get_teacher_or_403(request, "school.change_grade")
+        if not Timetable.objects.filter(
+            teacher=teacher,
+            school_class=grade.student.school_class,
+            subject__iexact=grade.subject
+        ).exists():
+            raise PermissionDenied("You can only edit grades for subjects and classes you teach.")
+
+    if request.method == "POST":
+        form = GradeForm(
+            request.POST,
+            instance=grade,
+            user=request.user
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Grade updated successfully!")
+            return redirect("grade_entry")
+    else:
+        form = GradeForm(instance=grade, user=request.user)
+
+    return render(
+        request,
+        "school/grade_form.html",
+        {"form": form}
+    )
+
+
 @role_required("Parent")
 def parent_child_detail(request, student_id):
     parent = getattr(request.user, "parent", None)
@@ -1328,7 +1238,6 @@ def parent_child_detail(request, student_id):
     if parent is None:
         raise PermissionDenied("No Parent profile is linked to this account.")
 
-    # Sirf apne bachay ka page; kisi aur ka id dene par 404 aayega
     student = get_object_or_404(
         parent.students.select_related("school_class"),
         id=student_id

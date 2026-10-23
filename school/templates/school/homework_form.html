@@ -8,20 +8,6 @@
     <form method="POST">
         {% csrf_token %}
 
-        {% if request.user.is_superuser %}
-            <label for="teacher">Select Teacher:</label>
-            <select name="teacher" id="teacher" required>
-                <option value="">Choose a teacher</option>
-
-                {% for teacher in teachers %}
-                    <option value="{{ teacher.pk }}">
-                        {{ teacher }}
-                    </option>
-                {% endfor %}
-            </select>
-            <br><br>
-        {% endif %}
-
         {{ form.as_p }}
 
         <button type="submit">Assign Homework</button>

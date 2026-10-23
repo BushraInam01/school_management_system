@@ -1,4 +1,4 @@
-first_name,last_name,roll_number,email,school_class
-Ali,Ahmed,S104,ali@example.com,Class 9
-Sara,Khan,S105,sara@example.com,Class 10
-Ahmed,Raza,S106,ahmed@example.com,Class 9
+first_name,last_name,roll_number,email,school_class,section
+Ali,Ahmed,S104,ali@example.com,Class 9,A
+Sara,Khan,S105,sara@example.com,Class 10,B
+Ahmed,Raza,S106,ahmed@example.com,Class 9,A

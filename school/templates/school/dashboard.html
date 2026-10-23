@@ -30,6 +30,7 @@
 
     {% elif role == "Parent" %}
         <h1>Welcome to Parent Dashboard</h1>
+        <p><a href="{% url 'timetable_view' %}">View Timetable</a></p>
 
         {% if children_data %}
             {% for item in children_data %}
@@ -37,7 +38,6 @@
 
                     <hr>
 
-                    
                     <h3>Student Information</h3>
 
                     <table>
@@ -46,7 +46,7 @@
                                 <th>Student Name</th>
                                 <th>Roll Number</th>
                                 <th>Class</th>
-                                <th>Report Card</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -55,9 +55,9 @@
                                 <td>{{ child.roll_number }}</td>
                                 <td>{{ child.school_class|default:"Not Assigned" }}</td>
                                 <td>
-                                    <a href="{% url 'report_card_exam_select' child.id %}">
-                                        View Report Card
-                                    </a>
+                                    <a href="{% url 'parent_child_detail' child.id %}">View Details</a> |
+                                    <a href="{% url 'timetable_view' %}">Timetable</a> |
+                                    <a href="{% url 'report_card_exam_select' child.id %}">View Report Card</a>
                                 </td>
                             </tr>
                         </tbody>
@@ -108,13 +108,7 @@
                                     <tr>
                                         <td>{{ hw.homework.title }}</td>
                                         <td>{{ hw.homework.due_date }}</td>
-                                        <td>
-                                            {% if hw.submission %}
-                                                Submitted
-                                            {% else %}
-                                                Not Submitted
-                                            {% endif %}
-                                        </td>
+                                        <td>{{ hw.status }}</td>
                                         <td>
                                             {% if hw.submission and hw.submission.marks != None %}
                                                 {{ hw.submission.marks }} / {{ hw.homework.total_marks }}
