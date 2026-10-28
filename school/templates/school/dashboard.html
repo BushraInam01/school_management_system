@@ -14,6 +14,7 @@
             <li><a href="{% url 'student_homework_list' %}">My Homework</a></li>
             <li><a href="{% url 'my_homework_results' %}">Homework Results</a></li>
             <li><a href="{% url 'my_report_card' %}">My Report Card</a></li>
+
         </ul>
 
     {% elif role == "Teacher" %}
@@ -30,149 +31,51 @@
 
     {% elif role == "Parent" %}
         <h1>Welcome to Parent Dashboard</h1>
-        <p><a href="{% url 'timetable_view' %}">View Timetable</a></p>
 
-        {% if children_data %}
-            {% for item in children_data %}
-                {% with child=item.child %}
+        <ul>
+            <li>
+                <a href="{% url 'timetable_view' %}">View Timetable</a>
+            </li>
 
-                    <hr>
+            {% if children_data %}
+                {% for item in children_data %}
+                    {% with child=item.child %}
+                        <li>
+                            <strong>
+                                {{ child.first_name }} {{ child.last_name }}
+                            </strong>
+                            ({{ child.roll_number }})
 
-                    <h3>Student Information</h3>
+                            <ul>
+                                <li>
+                                    <a href="{% url 'parent_child_detail' child.id %}">
+                                        View Details
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'timetable_view' %}">
+                                        Timetable
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{% url 'report_card_exam_select' child.id %}">
+                                        View Report Card
+                                    </a>
+                                </li>
 
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Student Name</th>
-                                <th>Roll Number</th>
-                                <th>Class</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>{{ child.first_name }} {{ child.last_name }}</td>
-                                <td>{{ child.roll_number }}</td>
-                                <td>{{ child.school_class|default:"Not Assigned" }}</td>
-                                <td>
-                                    <a href="{% url 'parent_child_detail' child.id %}">View Details</a> |
-                                    <a href="{% url 'timetable_view' %}">Timetable</a> |
-                                    <a href="{% url 'report_card_exam_select' child.id %}">View Report Card</a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-
-                    <h3>Results / Grades</h3>
-
-                    {% if item.grades %}
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Subject</th>
-                                    <th>Exam</th>
-                                    <th>Obtained Marks</th>
-                                    <th>Total Marks</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for grade in item.grades %}
-                                    <tr>
-                                        <td>{{ grade.subject }}</td>
-                                        <td>{{ grade.exam_name }}</td>
-                                        <td>{{ grade.obtained_marks }}</td>
-                                        <td>{{ grade.total_marks }}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p>No results available yet.</p>
-                    {% endif %}
-
-                    <h3>Homework</h3>
-
-                    {% if item.homework_items %}
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Title</th>
-                                    <th>Due Date</th>
-                                    <th>Status</th>
-                                    <th>Marks</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for hw in item.homework_items %}
-                                    <tr>
-                                        <td>{{ hw.homework.title }}</td>
-                                        <td>{{ hw.homework.due_date }}</td>
-                                        <td>{{ hw.status }}</td>
-                                        <td>
-                                            {% if hw.submission and hw.submission.marks != None %}
-                                                {{ hw.submission.marks }} / {{ hw.homework.total_marks }}
-                                            {% else %}
-                                                Not Graded
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p>No homework available for this child's class.</p>
-                    {% endif %}
-
-                    <h3>Fees Summary</h3>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Total Fees</th>
-                                <th>Paid Fees</th>
-                                <th>Remaining Fees</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>{{ item.total_fees }}</td>
-                                <td>{{ item.paid_fees }}</td>
-                                <td>{{ item.unpaid_fees }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <h3>Fee Records</h3>
-
-                    {% if item.fees %}
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Amount</th>
-                                    <th>Due Date</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for fee in item.fees %}
-                                    <tr>
-                                        <td>{{ fee.amount }}</td>
-                                        <td>{{ fee.due_date }}</td>
-                                        <td>{{ fee.status }}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    {% else %}
-                        <p>No fee records available.</p>
-                    {% endif %}
-
-                {% endwith %}
-            {% endfor %}
-        {% else %}
-            <p>No children are linked to your account.</p>
-        {% endif %}
+                                <li>
+                                    <a href="{% url 'parent_fee_records' child.id %}">
+                                        View Fee Records
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    {% endwith %}
+                {% endfor %}
+            {% else %}
+                <li>No children are linked to your account.</li>
+            {% endif %}
+        </ul>
 
     {% endif %}
 

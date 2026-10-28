@@ -31,4 +31,6 @@ urlpatterns = [
     path("report-card/<int:student_id>/select-exam/", views.report_card_exam_select, name="report_card_exam_select"),
     path("my-report-card/select-exam/", views.report_card_exam_select, name="my_report_card_exam_select"),
     path("parent/child/<int:student_id>/", views.parent_child_detail, name="parent_child_detail"),
+    path("parent/child/<int:student_id>/fees/", views.parent_fee_records, name="parent_fee_records"),
+    path("parent/child/<int:student_id>/fees/<int:fee_id>/receipt/", views.parent_fee_receipt_pdf, name="parent_fee_receipt_pdf"),
 ]

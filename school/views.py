@@ -1285,3 +1285,102 @@ def parent_child_detail(request, student_id):
             "fee_records": fee_records,
         },
     )
+
+
+@login_required
+@role_required("Parent")
+def parent_fee_records(request, student_id):
+    parent = getattr(request.user, "parent", None)
+
+    if parent is None:
+        raise PermissionDenied("No Parent profile is linked to this account.")
+
+    student = get_object_or_404(
+        parent.students.all(),
+        id=student_id
+    )
+
+    fee_records = student.fee_records.order_by("-due_date")
+
+    return render(
+        request,
+        "school/parent_fee_records.html",
+        {
+            "student": student,
+            "fee_records": fee_records,
+        }
+    )
+
+
+@login_required
+@role_required("Parent")
+def parent_fee_receipt_pdf(request, student_id, fee_id):
+    from io import BytesIO
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from django.http import HttpResponse
+
+    parent = getattr(request.user, "parent", None)
+
+    if parent is None:
+        raise PermissionDenied("No Parent profile is linked to this account.")
+
+    student = get_object_or_404(
+        parent.students.all(),
+        id=student_id
+    )
+
+    fee = get_object_or_404(
+        student.fee_records.all(),
+        id=fee_id
+    )
+
+    buffer = BytesIO()
+    document = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=20 * mm,
+        leftMargin=20 * mm,
+        topMargin=20 * mm,
+        bottomMargin=20 * mm,
+    )
+
+    styles = getSampleStyleSheet()
+    elements = [
+        Paragraph("School Fee Record", styles["Title"]),
+        Spacer(1, 12),
+        Paragraph(f"Student: {student}", styles["Normal"]),
+        Paragraph(f"Roll Number: {student.roll_number}", styles["Normal"]),
+        Spacer(1, 12),
+    ]
+
+    data = [
+        ["Fee Detail", "Information"],
+        ["Amount", f"Rs. {fee.amount}"],
+        ["Due Date", fee.due_date.strftime("%d-%m-%Y")],
+        ["Status", fee.status],
+        ["Record Created", fee.created_at.strftime("%d-%m-%Y")],
+    ]
+
+    table = Table(data, colWidths=[55 * mm, 90 * mm])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("PADDING", (0, 0), (-1, -1), 8),
+    ]))
+
+    elements.append(table)
+    document.build(elements)
+
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/pdf"
+    )
+    response["Content-Disposition"] = (
+        f'attachment; filename="fee_record_{fee.id}.pdf"'
+    )
+    return response

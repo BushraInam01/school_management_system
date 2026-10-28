@@ -1,0 +1,45 @@
+{% extends "school/base.html" %}
+
+{% block title %}Fee Records{% endblock %}
+
+{% block content %}
+<h1>Fee Records</h1>
+
+<p><strong>Student:</strong> {{ student }}</p>
+<p><strong>Roll Number:</strong> {{ student.roll_number }}</p>
+
+{% if fee_records %}
+<table>
+    <thead>
+        <tr>
+            <th>Amount</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Receipt</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for fee in fee_records %}
+        <tr>
+            <td>Rs. {{ fee.amount }}</td>
+            <td>{{ fee.due_date|date:"d-m-Y" }}</td>
+            <td>{{ fee.status }}</td>
+            <td>
+                <a href="{% url 'parent_fee_receipt_pdf' student.id fee.id %}">
+                    Download PDF
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No fee records found.</p>
+{% endif %}
+
+<p>
+    <a href="{% url 'parent_child_detail' student.id %}">
+        Back to Student Details
+    </a>
+</p>
+{% endblock %}
