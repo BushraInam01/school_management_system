@@ -417,6 +417,7 @@ Permissions required by the current views:
 |------------|----------|
 | `school.add_attendance` | Mark attendance |
 | `school.add_grade` | Single and bulk grade entry |
+| `school.change_grade` | Edit existing grades |
 | `school.add_homework` | Create homework |
 | `school.view_homework` | Teacher homework list |
 | `school.view_homeworksubmission` | View student submissions |
