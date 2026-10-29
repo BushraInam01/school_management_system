@@ -444,12 +444,12 @@ A teacher account also needs a linked `Teacher` profile and at least one timetab
 
 ### Configure Groups
 
-1. Log in to Django Admin with a superuser account.
-2. Open **Authentication and Authorization → Groups** and create `Teacher`, `Student` and `Parent`.
-3. Assign the Teacher permissions listed above (assigning fewer extra permissions is safer).
-4. Add each user to the correct group.
-5. Create the matching `Teacher`, `Student` or `Parent` profile and link it to the user.
-6. For parents, add children in the `students` field of the Parent record.
+1. Run `python manage.py setup_roles` to create the `Teacher`, `Student` and `Parent` groups and configure the required Teacher permissions.
+2. Log in to Django Admin with a superuser account.
+3. Add each user to the correct group.
+4. Create the matching `Teacher`, `Student` or `Parent` profile and link it to the user.
+5. For parents, add children in the `students` field of the Parent record.
+6. Ensure each teacher has at least one timetable entry assigning their classes.
 
 ### Known Limitations
 
