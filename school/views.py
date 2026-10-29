@@ -21,6 +21,7 @@ from django.views.decorators.http import require_POST
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import (
     SimpleDocTemplate,
@@ -1201,7 +1202,6 @@ def grade_edit(request, grade_id):
         {"form": form}
     )
 
-
 @role_required("Parent")
 def parent_child_detail(request, student_id):
     parent = getattr(request.user, "parent", None)
@@ -1257,8 +1257,6 @@ def parent_child_detail(request, student_id):
         },
     )
 
-
-@login_required
 @role_required("Parent")
 def parent_fee_records(request, student_id):
     parent = getattr(request.user, "parent", None)
@@ -1282,17 +1280,8 @@ def parent_fee_records(request, student_id):
         }
     )
 
-
-@login_required
 @role_required("Parent")
 def parent_fee_receipt_pdf(request, student_id, fee_id):
-    from io import BytesIO
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from django.http import HttpResponse
 
     parent = getattr(request.user, "parent", None)
 
@@ -1323,7 +1312,7 @@ def parent_fee_receipt_pdf(request, student_id, fee_id):
     elements = [
         Paragraph("School Fee Record", styles["Title"]),
         Spacer(1, 12),
-        Paragraph(f"Student: {student}", styles["Normal"]),
+        Paragraph(f"Student: {escape(str(student))}", styles["Normal"]),
         Paragraph(f"Roll Number: {student.roll_number}", styles["Normal"]),
         Spacer(1, 12),
     ]
