@@ -250,6 +250,12 @@ Start the Django development server before opening the links. These are local de
 | Logout | [Logout](http://127.0.0.1:8000/logout/) |
 | Django Admin | [Open Admin Panel](http://127.0.0.1:8000/admin/) |
 
+**Login and Access Behavior**
+- Users who open a protected page while logged out are redirected to the login page.
+- After successful login, users are redirected to the requested page when a valid `next` URL is provided.
+- Logging out ends the session and redirects the user to the login page.
+- Superusers bypass role-group checks. Fee records and the monthly attendance report remain administrator-only.
+
 ### 📅 Timetable and Attendance
 
 | Page | URL |
