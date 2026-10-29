@@ -318,6 +318,58 @@ class SchoolHomeworkAccessTests(TestCase):
         response = self.client.get(reverse("student_report_card", args=[student_2.id]))
         self.assertEqual(response.status_code, 403)
 
+    def test_student_cannot_select_another_student_report_card(self):
+        student_user = User.objects.create_user(
+            username="student_select_1",
+            password="TestPassword123!",
+        )
+        student_user.groups.add(self.student_group)
+
+        other_user = User.objects.create_user(
+            username="student_select_2",
+            password="TestPassword123!",
+        )
+        other_user.groups.add(self.student_group)
+
+        other_student = Student.objects.create(
+            user=other_user,
+            first_name="Other",
+            last_name="Student",
+            roll_number="SEL002",
+            school_class=self.class_a,
+        )
+
+        self.client.force_login(student_user)
+
+        response = self.client.get(
+            reverse("report_card_exam_select", args=[other_student.id])
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_teacher_cannot_select_unassigned_class_report_card(self):
+        student_user = User.objects.create_user(
+            username="select_class_b",
+            password="TestPassword123!",
+        )
+        student_user.groups.add(self.student_group)
+
+        student_b = Student.objects.create(
+            user=student_user,
+            first_name="Class",
+            last_name="B Student",
+            roll_number="SEL003",
+            school_class=self.class_b,
+        )
+
+        self.client.force_login(self.teacher_user)
+
+        response = self.client.get(
+            reverse("report_card_exam_select", args=[student_b.id])
+        )
+
+        self.assertEqual(response.status_code, 403)
+
     def test_teacher_cannot_access_unassigned_class_report_card(self):
         student_user = User.objects.create_user(username="student_in_b", password="TestPassword123!")
         student_user.groups.add(self.student_group)

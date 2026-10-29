@@ -518,24 +518,29 @@ def bulk_grade_entry(request):
     )
 
 
-# PDF Student Report Card View
-@login_required
-def student_report_card(request, student_id=None):
+
+
+def get_accessible_student(request, student_id=None):
     is_teacher = request.user.groups.filter(name="Teacher").exists()
     is_student = request.user.groups.filter(name="Student").exists()
 
-    # Students can only access their own report card
+    # Students can access only their own report card
     if is_student and not request.user.is_superuser:
         try:
             student = request.user.student
         except Student.DoesNotExist:
-            raise PermissionDenied("No Student profile is linked to this account.")
+            raise PermissionDenied(
+                "No Student profile is linked to this account."
+            )
 
         if student_id is not None and student.id != student_id:
-            raise PermissionDenied("You can only access your own report card.")
+            raise PermissionDenied(
+                "You can only access your own report card."
+            )
 
-    # Admin and teachers can access a selected student's report
-    # Parents can access only their own children's report cards
+        return student
+
+    # Parents can access only their own children
     elif (
         request.user.groups.filter(name="Parent").exists()
         and not request.user.is_superuser
@@ -547,13 +552,16 @@ def student_report_card(request, student_id=None):
         try:
             parent = request.user.parent
         except Parent.DoesNotExist:
-            raise PermissionDenied("No Parent profile is linked to this account.")
+            raise PermissionDenied(
+                "No Parent profile is linked to this account."
+            )
 
-        student = get_object_or_404(
+        return get_object_or_404(
             parent.students.select_related("school_class"),
             id=student_id
         )
 
+    # Superusers and teachers
     elif request.user.is_superuser or is_teacher:
         if student_id is None:
             messages.error(request, "Please provide a student ID.")
@@ -564,7 +572,7 @@ def student_report_card(request, student_id=None):
             id=student_id
         )
 
-        # Restrict teachers to their assigned classes
+        # Teachers can access only their assigned classes
         if is_teacher and not request.user.is_superuser:
             teacher = get_teacher_or_403(request)
             assigned_classes = _teacher_class_ids(teacher)
@@ -573,9 +581,25 @@ def student_report_card(request, student_id=None):
                 student.school_class_id is None
                 or student.school_class_id not in assigned_classes
             ):
-                raise PermissionDenied("You can only access report cards for your assigned classes.")
-    else:
-        raise PermissionDenied("Access Denied: You are not authorized.")
+                raise PermissionDenied(
+                    "You can only access report cards for your assigned classes."
+                )
+
+        return student
+
+    raise PermissionDenied(
+        "Access Denied: You are not authorized."
+    )
+
+
+
+# PDF Student Report Card View
+@login_required
+def student_report_card(request, student_id=None):
+    student = get_accessible_student(request, student_id)
+
+    if not isinstance(student, Student):
+        return student
 
     # Read the selected exam from the URL
     exam_name = request.GET.get("exam_name", "").strip()
@@ -724,65 +748,13 @@ def student_report_card(request, student_id=None):
     )
     return response
 
-
 # Report Card Exam Selection View
 @login_required
 def report_card_exam_select(request, student_id=None):
-    is_teacher = request.user.groups.filter(name="Teacher").exists()
-    is_student = request.user.groups.filter(name="Student").exists()
+    student = get_accessible_student(request, student_id)
 
-    # Students can select exams only for their own report card
-    if is_student and not request.user.is_superuser:
-        try:
-            student = request.user.student
-        except Student.DoesNotExist:
-            raise PermissionDenied("No Student profile is linked to this account.")
-
-        if student_id is not None and student.id != student_id:
-            raise PermissionDenied("You can only access your own report card.")
-
-    # Admin and teachers can select a student's report card
-    # Parents can access only their own children's report cards
-    elif (
-        request.user.groups.filter(name="Parent").exists()
-        and not request.user.is_superuser
-    ):
-        if student_id is None:
-            messages.error(request, "Please provide a student ID.")
-            return redirect("dashboard")
-
-        try:
-            parent = request.user.parent
-        except Parent.DoesNotExist:
-            raise PermissionDenied("No Parent profile is linked to this account.")
-
-        student = get_object_or_404(
-            parent.students.select_related("school_class"),
-            id=student_id
-        )
-
-    elif request.user.is_superuser or is_teacher:
-        if student_id is None:
-            messages.error(request, "Please provide a student ID.")
-            return redirect("dashboard")
-
-        student = get_object_or_404(
-            Student.objects.select_related("school_class"),
-            id=student_id
-        )
-
-        # Restrict teachers to their assigned classes
-        if is_teacher and not request.user.is_superuser:
-            teacher = get_teacher_or_403(request)
-            assigned_classes = _teacher_class_ids(teacher)
-
-            if (
-                student.school_class_id is None
-                or student.school_class_id not in assigned_classes
-            ):
-                raise PermissionDenied("You can only access report cards for your assigned classes.")
-    else:
-        raise PermissionDenied("Access Denied: You are not authorized.")
+    if not isinstance(student, Student):
+        return student
 
     exam_names = (
         Grade.objects.filter(student=student)
@@ -828,7 +800,6 @@ def report_card_exam_select(request, student_id=None):
             "exam_names": exam_names,
         }
     )
-
 
 
 # Homework Assignment View
