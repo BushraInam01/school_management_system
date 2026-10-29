@@ -254,7 +254,8 @@ Start the Django development server before opening the links. These are local de
 - Users who open a protected page while logged out are redirected to the login page.
 - After successful login, users are redirected to the requested page when a valid `next` URL is provided.
 - Logging out ends the session and redirects the user to the login page.
-- Superusers bypass role-group checks. Fee records and the monthly attendance report remain administrator-only.
+- Superusers are always redirected to `/admin/` after login, even when a `next` URL is provided. They bypass role-group checks, but the timetable page does not allow superuser access.
+- Fee records and the monthly attendance report are restricted to administrators.
 
 ### 📅 Timetable and Attendance
 
