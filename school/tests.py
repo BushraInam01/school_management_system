@@ -307,15 +307,41 @@ class SchoolHomeworkAccessTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_student_cannot_view_other_student_report_card(self):
-        student_user = User.objects.create_user(username="student_1", password="TestPassword123!")
+        student_user = User.objects.create_user(
+            username="student_1",
+            password="TestPassword123!",
+        )
         student_user.groups.add(self.student_group)
 
-        other_user = User.objects.create_user(username="student_2", password="TestPassword123!")
+        # Create the logged-in student's own profile
+        Student.objects.create(
+            user=student_user,
+            first_name="Student",
+            last_name="One",
+            roll_number="ST001",
+            school_class=self.class_a,
+        )
+
+        other_user = User.objects.create_user(
+            username="student_2",
+            password="TestPassword123!",
+        )
         other_user.groups.add(self.student_group)
-        student_2 = Student.objects.create(user=other_user, first_name="Student", last_name="Two", roll_number="ST002", school_class=self.class_a)
+
+        student_2 = Student.objects.create(
+            user=other_user,
+            first_name="Student",
+            last_name="Two",
+            roll_number="ST002",
+            school_class=self.class_a,
+        )
 
         self.client.force_login(student_user)
-        response = self.client.get(reverse("student_report_card", args=[student_2.id]))
+
+        response = self.client.get(
+            reverse("student_report_card", args=[student_2.id])
+        )
+
         self.assertEqual(response.status_code, 403)
 
     def test_student_cannot_select_another_student_report_card(self):
@@ -324,6 +350,15 @@ class SchoolHomeworkAccessTests(TestCase):
             password="TestPassword123!",
         )
         student_user.groups.add(self.student_group)
+
+        # Create the logged-in student's own profile
+        Student.objects.create(
+            user=student_user,
+            first_name="Select",
+            last_name="One",
+            roll_number="SEL001",
+            school_class=self.class_a,
+        )
 
         other_user = User.objects.create_user(
             username="student_select_2",
@@ -346,6 +381,29 @@ class SchoolHomeworkAccessTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+    def test_student_can_open_own_report_card_exam_selection(self):
+        student_user = User.objects.create_user(
+            username="student_own_report",
+            password="TestPassword123!",
+        )
+        student_user.groups.add(self.student_group)
+
+        own_student = Student.objects.create(
+            user=student_user,
+            first_name="Own",
+            last_name="Student",
+            roll_number="OWN001",
+            school_class=self.class_a,
+        )
+
+        self.client.force_login(student_user)
+
+        response = self.client.get(
+            reverse("report_card_exam_select", args=[own_student.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
 
     def test_teacher_cannot_select_unassigned_class_report_card(self):
         student_user = User.objects.create_user(
